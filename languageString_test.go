@@ -7,9 +7,10 @@ import (
 
 func TestLanguageString_Country(t *testing.T) {
 	type fields struct {
-		language   string
-		country    string
-		hasCountry bool
+		language    string
+		country     string
+		hasCountry  bool
+		AlwaysLower bool
 	}
 	tests := []struct {
 		name   string
@@ -18,14 +19,16 @@ func TestLanguageString_Country(t *testing.T) {
 		want1  bool
 	}{
 		{"full string", fields{language: "en", country: "US", hasCountry: true}, "US", true},
+		{"full string, lower", fields{language: "en", country: "US", hasCountry: true, AlwaysLower: true}, "us", true},
 		{"no country", fields{language: "en", country: "", hasCountry: false}, "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ls := &LanguageString{
-				language:   tt.fields.language,
-				country:    tt.fields.country,
-				hasCountry: tt.fields.hasCountry,
+				language:    tt.fields.language,
+				country:     tt.fields.country,
+				hasCountry:  tt.fields.hasCountry,
+				AlwaysLower: tt.fields.AlwaysLower,
 			}
 			got, got1 := ls.Country()
 			if got != tt.want {
@@ -40,9 +43,10 @@ func TestLanguageString_Country(t *testing.T) {
 
 func TestLanguageString_Language(t *testing.T) {
 	type fields struct {
-		language   string
-		country    string
-		hasCountry bool
+		language    string
+		country     string
+		hasCountry  bool
+		AlwaysLower bool
 	}
 	tests := []struct {
 		name   string
@@ -51,13 +55,15 @@ func TestLanguageString_Language(t *testing.T) {
 	}{
 		{"full string", fields{language: "en", country: "US", hasCountry: true}, "en"},
 		{"no country", fields{language: "en", country: "", hasCountry: false}, "en"},
+		{"full string, lower", fields{language: "EN", country: "US", hasCountry: true, AlwaysLower: true}, "en"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ls := &LanguageString{
-				language:   tt.fields.language,
-				country:    tt.fields.country,
-				hasCountry: tt.fields.hasCountry,
+				language:    tt.fields.language,
+				country:     tt.fields.country,
+				hasCountry:  tt.fields.hasCountry,
+				AlwaysLower: tt.fields.AlwaysLower,
 			}
 			if got := ls.Language(); got != tt.want {
 				t.Errorf("Language() = %v, want %v", got, tt.want)
@@ -68,9 +74,11 @@ func TestLanguageString_Language(t *testing.T) {
 
 func TestLanguageString_String(t *testing.T) {
 	type fields struct {
-		language   string
-		country    string
-		hasCountry bool
+		language      string
+		country       string
+		hasCountry    bool
+		AlwaysLower   bool
+		UseUnderscore bool
 	}
 	tests := []struct {
 		name   string
@@ -78,14 +86,19 @@ func TestLanguageString_String(t *testing.T) {
 		want   string
 	}{
 		{"full string", fields{language: "en", country: "US", hasCountry: true}, "en-US"},
+		{"full string, lower", fields{language: "en", country: "US", hasCountry: true, AlwaysLower: true}, "en-us"},
+		{"full string, underscore", fields{language: "en", country: "US", hasCountry: true, UseUnderscore: true}, "en_US"},
+		{"full string, lower and underscore", fields{language: "en", country: "US", hasCountry: true, AlwaysLower: true, UseUnderscore: true}, "en_us"},
 		{"no country", fields{language: "en", country: "", hasCountry: false}, "en"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ls := &LanguageString{
-				language:   tt.fields.language,
-				country:    tt.fields.country,
-				hasCountry: tt.fields.hasCountry,
+				language:      tt.fields.language,
+				country:       tt.fields.country,
+				hasCountry:    tt.fields.hasCountry,
+				AlwaysLower:   tt.fields.AlwaysLower,
+				UseUnderscore: tt.fields.UseUnderscore,
 			}
 			if got := ls.String(); got != tt.want {
 				t.Errorf("String() = %v, want %v", got, tt.want)
@@ -105,6 +118,7 @@ func TestParse(t *testing.T) {
 		wantErr bool
 	}{
 		{"full string", args{input: "en-US"}, LanguageString{language: "en", country: "US", hasCountry: true}, false},
+		{"full string with underscore", args{input: "en_US"}, LanguageString{language: "en", country: "US", hasCountry: true}, false},
 		{"no country", args{input: "en"}, LanguageString{language: "en", country: "", hasCountry: false}, false},
 		{"empty", args{input: ""}, LanguageString{}, true},
 		{"empty language", args{input: "-US"}, LanguageString{}, true},
@@ -125,9 +139,11 @@ func TestParse(t *testing.T) {
 
 func TestLanguageString_PriorityList(t *testing.T) {
 	type fields struct {
-		language   string
-		country    string
-		hasCountry bool
+		language      string
+		country       string
+		hasCountry    bool
+		AlwaysLower   bool
+		UseUnderscore bool
 	}
 	tests := []struct {
 		name   string
@@ -136,13 +152,20 @@ func TestLanguageString_PriorityList(t *testing.T) {
 	}{
 		{"full string", fields{language: "en", country: "US", hasCountry: true}, []string{"en-US", "en"}},
 		{"no country", fields{language: "en", country: "", hasCountry: false}, []string{"en"}},
+		{"no country all caps, lower", fields{language: "EN", country: "", hasCountry: false, AlwaysLower: true}, []string{"en"}},
+		{"full string, lower", fields{language: "en", country: "US", hasCountry: true, AlwaysLower: true}, []string{"en-us", "en"}},
+		{"full string, underscore", fields{language: "en", country: "US", hasCountry: true, UseUnderscore: true}, []string{"en_US", "en"}},
+		{"full string, all caps and lower", fields{language: "EN", country: "US", hasCountry: true, AlwaysLower: true}, []string{"en-us", "en"}},
+		{"full string, all caps, lower and underscore", fields{language: "EN", country: "US", hasCountry: true, AlwaysLower: true, UseUnderscore: true}, []string{"en_us", "en"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ls := &LanguageString{
-				language:   tt.fields.language,
-				country:    tt.fields.country,
-				hasCountry: tt.fields.hasCountry,
+				language:      tt.fields.language,
+				country:       tt.fields.country,
+				hasCountry:    tt.fields.hasCountry,
+				AlwaysLower:   tt.fields.AlwaysLower,
+				UseUnderscore: tt.fields.UseUnderscore,
 			}
 			if got := ls.PriorityList(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PriorityList() = %v, want %v", got, tt.want)

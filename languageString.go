@@ -7,9 +7,11 @@ import (
 )
 
 type LanguageString struct {
-	language   string
-	country    string
-	hasCountry bool
+	language      string
+	country       string
+	hasCountry    bool
+	AlwaysLower   bool
+	UseUnderscore bool
 }
 
 func NewLanguageString(language string) (LanguageString, error) {
@@ -33,27 +35,46 @@ func Parse(input string) (LanguageString, error) {
 		s := strings.Split(input, "-")
 		return NewLanguageStringWithCountry(s[0], s[1])
 	}
+	if strings.Contains(input, "_") {
+		s := strings.Split(input, "_")
+		return NewLanguageStringWithCountry(s[0], s[1])
+	}
 	return NewLanguageString(input)
 }
 
 func (ls *LanguageString) String() string {
 	if ls.hasCountry {
-		return fmt.Sprintf("%s-%s", ls.language, ls.country)
+		if ls.UseUnderscore {
+			return fmt.Sprintf("%s_%s", ls.Language(), ls.justCountry())
+		}
+		return fmt.Sprintf("%s-%s", ls.Language(), ls.justCountry())
 	}
-	return ls.language
+	return ls.Language()
 }
 
 func (ls *LanguageString) Country() (string, bool) {
+	if ls.AlwaysLower {
+		return strings.ToLower(ls.country), ls.hasCountry
+	}
 	return ls.country, ls.hasCountry
 }
 
+// justCountry is used internally to just return the country portion
+func (ls *LanguageString) justCountry() string {
+	c, _ := ls.Country()
+	return c
+}
+
 func (ls *LanguageString) Language() string {
+	if ls.AlwaysLower {
+		return strings.ToLower(ls.language)
+	}
 	return ls.language
 }
 
 func (ls *LanguageString) PriorityList() []string {
 	if ls.hasCountry {
-		return []string{ls.String(), ls.language}
+		return []string{ls.String(), ls.Language()}
 	}
-	return []string{ls.language}
+	return []string{ls.Language()}
 }
